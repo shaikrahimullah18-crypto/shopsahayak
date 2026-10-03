@@ -733,6 +733,44 @@
   gap: 8px;
 }
 
+/* Registration Form Styles */
+.login-card.register-mode {
+  max-width: 580px;
+}
+
+.register-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.login-input.no-icon {
+  padding: 0 14px;
+}
+
+.register-success-alert {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #059669;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .register-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .login-card.register-mode {
+    max-width: 100%;
+    padding: 24px 18px;
+  }
+}
+
 /* Step 2 Face Verification View */
 .login-face-section {
   display: none;

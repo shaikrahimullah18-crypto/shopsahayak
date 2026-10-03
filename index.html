@@ -93,7 +93,132 @@
           <button type="submit" class="btn btn-primary" id="loginSubmitBtn" style="height: 42px; font-weight: 600; width: 100%; justify-content: center; font-size: 13px;" data-i18n="loginNextBtn">
             Continue to Face Verification →
           </button>
+
+          <!-- Switch to Registration -->
+          <div class="login-switch-row" style="text-align: center; margin-top: 4px; font-size: 13px; color: var(--color-text-subtle);">
+            <span data-i18n="loginNewUserPrompt">New Kirana or Retail store?</span>
+            <a href="#" id="showRegisterBtn" style="color: var(--color-primary); font-weight: 600; text-decoration: none; margin-left: 4px;" data-i18n="loginRegisterLink">Register your store</a>
+          </div>
         </form>
+      </div>
+
+      <!-- STORE REGISTRATION SECTION -->
+      <div id="registerSection" style="display: none; flex-direction: column; gap: 14px;">
+        <div style="text-align: center; margin-bottom: 2px;">
+          <h2 style="font-size: 17px; font-weight: 700; margin: 0; color: var(--color-text-primary);" data-i18n="registerHeading">Register Your Kirana Store</h2>
+          <p style="font-size: 12.5px; color: var(--color-text-subtle); margin: 4px 0 0 0;" data-i18n="registerSubheading">Connect your shop to AI inventory, automated khata & smart billing</p>
+        </div>
+
+        <form id="registerStoreForm" style="display: flex; flex-direction: column; gap: 12px;">
+          <!-- Inline Alerts -->
+          <div class="login-error-alert" id="registerError" role="alert"></div>
+          <div class="register-success-alert" id="registerSuccess" role="alert"></div>
+
+          <div class="register-form-grid">
+            <!-- Owner Name -->
+            <div class="login-form-group">
+              <label class="login-form-label" for="regOwnerName" data-i18n="regOwnerNameLabel">Owner Full Name *</label>
+              <div class="login-input-wrapper">
+                <input type="text" id="regOwnerName" class="login-input no-icon" placeholder="e.g. Ramesh Patel" required>
+              </div>
+            </div>
+
+            <!-- Store Name -->
+            <div class="login-form-group">
+              <label class="login-form-label" for="regStoreName" data-i18n="regStoreNameLabel">Store / Business Name *</label>
+              <div class="login-input-wrapper">
+                <input type="text" id="regStoreName" class="login-input no-icon" placeholder="e.g. Patel Provision Store" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="register-form-grid">
+            <!-- Email -->
+            <div class="login-form-group">
+              <label class="login-form-label" for="regEmail" data-i18n="regEmailLabel">Email Address *</label>
+              <div class="login-input-wrapper">
+                <input type="email" id="regEmail" class="login-input no-icon" placeholder="e.g. patel@kiranaos.in" autocomplete="email" required>
+              </div>
+            </div>
+
+            <!-- Phone -->
+            <div class="login-form-group">
+              <label class="login-form-label" for="regPhone" data-i18n="regPhoneLabel">Mobile / WhatsApp Number *</label>
+              <div class="login-input-wrapper">
+                <input type="tel" id="regPhone" class="login-input no-icon" placeholder="+91 98765 43210" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="register-form-grid">
+            <!-- Category -->
+            <div class="login-form-group">
+              <label class="login-form-label" for="regCategory" data-i18n="regCategoryLabel">Store Category</label>
+              <div class="login-input-wrapper">
+                <select id="regCategory" class="login-input no-icon" style="cursor: pointer;">
+                  <option value="Grocery & FMCG">Grocery & FMCG / Kirana</option>
+                  <option value="Supermarket">Mini Supermarket</option>
+                  <option value="Dairy & Bakery">Dairy & Bakery</option>
+                  <option value="Fruits & Vegetables">Fruits & Vegetables</option>
+                  <option value="General Store">General Retail & Stationery</option>
+                  <option value="Pharmacy">Medical / Chemist</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- UPI ID -->
+            <div class="login-form-group">
+              <label class="login-form-label" for="regUpi" data-i18n="regUpiLabel">Store UPI ID (For QR Billing)</label>
+              <div class="login-input-wrapper">
+                <input type="text" id="regUpi" class="login-input no-icon" placeholder="e.g. patelstore@icici">
+              </div>
+            </div>
+          </div>
+
+          <!-- Address -->
+          <div class="login-form-group">
+            <label class="login-form-label" for="regAddress" data-i18n="regAddressLabel">Shop Address & City</label>
+            <div class="login-input-wrapper">
+              <input type="text" id="regAddress" class="login-input no-icon" placeholder="e.g. Shop #12, Market Road, Bengaluru">
+            </div>
+          </div>
+
+          <!-- GSTIN -->
+          <div class="login-form-group">
+            <label class="login-form-label" for="regGstin" data-i18n="regGstinLabel">GSTIN (Optional)</label>
+            <div class="login-input-wrapper">
+              <input type="text" id="regGstin" class="login-input no-icon" placeholder="e.g. 29AABCU9603R1ZM">
+            </div>
+          </div>
+
+          <div class="register-form-grid">
+            <!-- Password -->
+            <div class="login-form-group">
+              <label class="login-form-label" for="regPassword" data-i18n="regPasswordLabel">Password (Min 6 chars) *</label>
+              <div class="login-input-wrapper">
+                <input type="password" id="regPassword" class="login-input no-icon" placeholder="Create password" autocomplete="new-password" required minlength="6">
+              </div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="login-form-group">
+              <label class="login-form-label" for="regConfirmPassword" data-i18n="regConfirmPasswordLabel">Confirm Password *</label>
+              <div class="login-input-wrapper">
+                <input type="password" id="regConfirmPassword" class="login-input no-icon" placeholder="Re-enter password" autocomplete="new-password" required minlength="6">
+              </div>
+            </div>
+          </div>
+
+          <!-- Register Submit Button -->
+          <button type="submit" class="btn btn-primary" id="registerSubmitBtn" style="height: 42px; font-weight: 600; width: 100%; justify-content: center; font-size: 13px; margin-top: 4px;" data-i18n="registerSubmitBtn">
+            Register Store & Launch ShopSahayak ✦
+          </button>
+        </form>
+
+        <div class="login-switch-row" style="text-align: center; margin-top: 4px; font-size: 13px; color: var(--color-text-subtle);">
+          <span data-i18n="regAlreadyUser">Already have a store account?</span>
+          <a href="#" id="showLoginFromRegBtn" style="color: var(--color-primary); font-weight: 600; text-decoration: none; margin-left: 4px;" data-i18n="regBackToLogin">Sign in here</a>
+        </div>
       </div>
 
       <!-- STEP 2: FACE VERIFICATION -->
@@ -471,7 +596,7 @@
               <div>
                 <div class="card-header">
                   <div class="card-title" data-i18n="inventoryHealth">Inventory Health</div>
-                  <span class="badge badge-neutral" data-i18n="activeSkus">15 Active SKUs</span>
+                  <span class="badge badge-neutral" id="invActiveSkusBadge">0 Active SKUs</span>
                 </div>
                 <div class="card-body">
                   <div class="inventory-health-container">
@@ -759,23 +884,23 @@
           <div class="kpi-grid">
             <div class="kpi-card">
               <span class="kpi-title" data-i18n="totalActiveSkusCard">Total Active SKUs</span>
-              <div class="kpi-value">15</div>
+              <div class="kpi-value" id="invTotalSkusVal">0</div>
               <span class="trend-subtext" data-i18n="allCategories">All store categories</span>
             </div>
             <div class="kpi-card">
               <span class="kpi-title" data-i18n="healthyStockCard">Healthy Stock</span>
-              <div class="kpi-value" style="color:var(--color-success-dark);" id="invHealthyCardVal">8</div>
+              <div class="kpi-value" style="color:var(--color-success-dark);" id="invHealthyCardVal">0</div>
               <span class="trend-subtext" data-i18n="adequateBufferSub">Adequate buffer > 14 days</span>
             </div>
             <div class="kpi-card">
               <span class="kpi-title" data-i18n="lowStockAlertCard">Low Stock Alert</span>
-              <div class="kpi-value" style="color:var(--color-warning-dark);" id="invLowCardVal">6</div>
-              <span class="badge badge-warning" data-i18n="actionRecommendedSub">Action recommended</span>
+              <div class="kpi-value" style="color:var(--color-warning-dark);" id="invLowCardVal">0</div>
+              <span class="badge badge-warning" id="invLowBadge" data-i18n="actionRecommendedSub">Action recommended</span>
             </div>
             <div class="kpi-card">
               <span class="kpi-title" data-i18n="outOfStockCard">Out of Stock</span>
-              <div class="kpi-value" style="color:var(--color-danger);" id="invOutCardVal">1</div>
-              <span class="badge badge-danger">Maggi 70g</span>
+              <div class="kpi-value" style="color:var(--color-danger);" id="invOutCardVal">0</div>
+              <span class="badge badge-neutral" id="invOutBadge">None</span>
             </div>
           </div>
 
@@ -883,8 +1008,9 @@
               <h1 class="page-title" data-i18n="customersTitle">Customer Information & Khata Ledger</h1>
               <p class="page-subtitle" data-i18n="customersSubtitle">Track regular customers, purchase frequency, store credit (Udhar), and WhatsApp reminders</p>
             </div>
-            <div class="page-actions">
-              <button class="btn btn-secondary" onclick="window.shopUI.showToast('WhatsApp Khata payment reminders queued for 2 customers', 'success')" data-i18n="sendKhataReminders">Send Khata Reminders</button>
+            <div class="page-actions" style="display:flex; gap:10px;">
+              <button class="btn btn-secondary" onclick="window.shopUI.showToast('WhatsApp Khata payment reminders queued for customer accounts', 'success')" data-i18n="sendKhataReminders">Send Khata Reminders</button>
+              <button class="btn btn-primary" onclick="window.shopUI.openAddCustomerModal()">+ Add Customer</button>
             </div>
           </div>
 
@@ -917,8 +1043,9 @@
               <h1 class="page-title" data-i18n="suppliersTitle">Distributor & Supplier Management</h1>
               <p class="page-subtitle" data-i18n="suppliersSubtitle">Manage wholesale suppliers, purchase order histories, and delivery schedules</p>
             </div>
-            <div class="page-actions">
-              <button class="btn btn-primary" onclick="window.shopUI.openRestockModal('PROD-001')" data-i18n="createPoBtn">+ Create Purchase Order</button>
+            <div class="page-actions" style="display:flex; gap:10px;">
+              <button class="btn btn-secondary" onclick="window.shopUI.openAddSupplierModal()">+ Add Supplier</button>
+              <button class="btn btn-primary" onclick="window.shopUI.openNewPurchaseOrderModal()">+ Create Purchase Order</button>
             </div>
           </div>
 
@@ -1197,28 +1324,28 @@
                   <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:14px;">
                     <div class="form-group">
                       <label class="form-label" data-i18n="tradeNameLabel">Store Legal Trade Name</label>
-                      <input type="text" class="form-input" value="Sharma Kirana Store">
+                      <input type="text" id="settingsTradeName" class="form-input" value="Sharma Kirana Store">
                     </div>
                     <div class="form-group">
                       <label class="form-label" data-i18n="gstinLabel">GSTIN / Tax ID</label>
-                      <input type="text" class="form-input" value="36AABCS1429B1Z8">
+                      <input type="text" id="settingsGstin" class="form-input" value="36AABCS1429B1Z8">
                     </div>
                     <div class="form-group">
                       <label class="form-label" data-i18n="ownerNameLabel">Owner Name</label>
-                      <input type="text" class="form-input" value="Ravi Sharma">
+                      <input type="text" id="settingsOwnerName" class="form-input" value="Ravi Sharma">
                     </div>
                     <div class="form-group">
                       <label class="form-label" data-i18n="phoneLabel">Contact Phone</label>
-                      <input type="text" class="form-input" value="+91 98490 23145">
+                      <input type="text" id="settingsPhone" class="form-input" value="+91 98490 23145">
                     </div>
                     <div class="form-group" style="grid-column: span 2;">
                       <label class="form-label" data-i18n="addressLabel">Address</label>
-                      <input type="text" class="form-input" value="Shop #4, Near Hanuman Temple, KPHB Phase 3, Hyderabad, Telangana - 500072">
+                      <input type="text" id="settingsAddress" class="form-input" value="Shop #4, Near Hanuman Temple, KPHB Phase 3, Hyderabad, Telangana - 500072">
                     </div>
                   </div>
                 </div>
                 <div class="card-footer">
-                  <button class="btn btn-primary" onclick="window.shopUI.showToast('Store profile details saved', 'success')" data-i18n="saveChangesBtn">Save Changes</button>
+                  <button class="btn btn-primary" onclick="window.shopUI.saveStoreProfileSettings()" data-i18n="saveChangesBtn">Save Changes</button>
                 </div>
               </div>
             </div>
@@ -1503,13 +1630,132 @@
     </div>
   </div>
 
-  <!-- TOAST NOTIFICATION CONTAINER -->
+  <!-- ADD CUSTOMER MODAL -->
+  <div class="modal-backdrop" id="addCustomerModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">+ Add New Customer / Khata Account</span>
+        <button class="modal-close-btn" onclick="window.shopUI.closeAddCustomerModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Customer Full Name *</label>
+          <input type="text" id="custNameInput" class="form-input" placeholder="e.g., Ramesh Kumar, Ananya Reddy">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number (WhatsApp)</label>
+          <input type="text" id="custPhoneInput" class="form-input" placeholder="+91 98490 00000">
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
+          <div class="form-group">
+            <label class="form-label">Customer Type</label>
+            <select id="custTypeSelect" class="form-select">
+              <option value="Regular">Regular</option>
+              <option value="Regular (Khata)" selected>Regular (Khata)</option>
+              <option value="VIP Regular">VIP Regular</option>
+              <option value="Walk-in">Walk-in</option>
+              <option value="Commercial Bulk">Commercial Bulk</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Khata / Udhar (₹)</label>
+            <div class="input-with-currency">
+              <span class="currency-symbol-addon">₹</span>
+              <input type="number" id="custInitialKhata" class="form-input" placeholder="0">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="window.shopUI.closeAddCustomerModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="window.shopUI.handleSaveCustomer()">Save Customer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD SUPPLIER MODAL -->
+  <div class="modal-backdrop" id="addSupplierModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">+ Add Wholesale Distributor / Supplier</span>
+        <button class="modal-close-btn" onclick="window.shopUI.closeAddSupplierModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Supplier / Agency Name *</label>
+          <input type="text" id="suppNameInput" class="form-input" placeholder="e.g., Sri Balaji Traders, Royal Grains Agency">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category / Items Supplied</label>
+          <input type="text" id="suppCategoryInput" class="form-input" placeholder="e.g., Grains, Rice & Bulk Staples">
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
+          <div class="form-group">
+            <label class="form-label">Contact Person</label>
+            <input type="text" id="suppContactInput" class="form-input" placeholder="e.g., Rajesh Kumar">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="text" id="suppPhoneInput" class="form-input" placeholder="+91 98490 12345">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="window.shopUI.closeAddSupplierModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="window.shopUI.handleSaveSupplier()">Save Supplier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW PURCHASE ORDER MODAL -->
+  <div class="modal-backdrop" id="newPurchaseOrderModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">+ Create Wholesale Purchase Order</span>
+        <button class="modal-close-btn" onclick="window.shopUI.closeNewPurchaseOrderModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Item / Product Name *</label>
+          <input type="text" id="poProductNameInput" class="form-input" placeholder="e.g., Sona Masoori Rice (25kg Bag)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Wholesale Supplier *</label>
+          <select id="poSupplierSelect" class="form-select">
+            <option value="">Select Supplier</option>
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+          <div class="form-group">
+            <label class="form-label">Quantity *</label>
+            <input type="number" id="poQuantityInput" class="form-input" placeholder="10" min="1" value="10">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit</label>
+            <input type="text" id="poUnitInput" class="form-input" placeholder="bags" value="bags">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit Price (₹) *</label>
+            <div class="input-with-currency">
+              <span class="currency-symbol-addon">₹</span>
+              <input type="number" id="poUnitPriceInput" class="form-input" placeholder="500">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="window.shopUI.closeNewPurchaseOrderModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="window.shopUI.handleSavePurchaseOrder()">Generate & Approve PO</button>
+      </div>
+    </div>
+  </div>
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic Scripts -->
   <script src="js/data.js"></script>
   <script src="js/translations.js"></script>
   <script src="js/state.js"></script>
+  <script src="js/api-service.js"></script>
   <script src="js/camera.js"></script>
   <script src="js/ai-engine.js"></script>
   <script src="js/ui-controllers.js"></script>

@@ -94,6 +94,7 @@ class ShopAuthManager {
     this.timeoutTimerId = null;
     this.STEADY_HOLD_DURATION_MS = 1500; // 1.5 seconds steady hold required
     this.SCAN_TIMEOUT_MS = 20000;         // 20s timeout for demo bypass offer
+    this.activeUser = null;
   }
 
   /**
@@ -126,19 +127,47 @@ class ShopAuthManager {
 
   /**
    * Save session to sessionStorage
-   * @param {string} authMethod - 'credentials_and_face' or 'demo_bypass'
+   * @param {string} authMethod - 'credentials_and_face', 'demo_bypass', or 'registered_user'
    */
   _saveSession(authMethod) {
     try {
+      const user = this.activeUser || DEMO_AUTH_CREDENTIALS.user;
       const sessionData = {
-        user: DEMO_AUTH_CREDENTIALS.user,
+        user: user,
         authMethod: authMethod,
         timestamp: Date.now()
       };
       sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+      if (user && user.email) {
+        localStorage.setItem("shopsahayak_user_email", user.email);
+      }
     } catch (e) {
       // Ignore storage errors in restrictive modes
     }
+  }
+
+  /**
+   * Show registration view
+   */
+  showRegister() {
+    this._stopDetection();
+    window.ShopCamera.stopCamera();
+
+    const loginCard = document.querySelector(".login-card");
+    const step1Sec = document.getElementById("loginStep1Section");
+    const step2Sec = document.getElementById("loginStep2Section");
+    const regSec = document.getElementById("registerSection");
+    const stepsIndicator = document.querySelector(".login-steps-indicator");
+    const regErr = document.getElementById("registerError");
+    const regSuccess = document.getElementById("registerSuccess");
+
+    if (loginCard) loginCard.classList.add("register-mode");
+    if (stepsIndicator) stepsIndicator.style.display = "none";
+    if (step1Sec) step1Sec.style.display = "none";
+    if (step2Sec) step2Sec.classList.remove("active");
+    if (regSec) regSec.style.display = "flex";
+    if (regErr) regErr.style.display = "none";
+    if (regSuccess) regSuccess.style.display = "none";
   }
 
   /**
@@ -148,9 +177,15 @@ class ShopAuthManager {
   showLogin(step = 1) {
     const loginContainer = document.getElementById("loginContainer");
     const appShell = document.getElementById("app");
+    const loginCard = document.querySelector(".login-card");
+    const regSec = document.getElementById("registerSection");
+    const stepsIndicator = document.querySelector(".login-steps-indicator");
 
     if (loginContainer) loginContainer.style.display = "flex";
     if (appShell) appShell.style.display = "none";
+    if (loginCard) loginCard.classList.remove("register-mode");
+    if (regSec) regSec.style.display = "none";
+    if (stepsIndicator) stepsIndicator.style.display = "flex";
 
     this.goToStep(step);
   }
@@ -202,31 +237,182 @@ class ShopAuthManager {
   }
 
   /**
-   * Handle Step 1 credentials form submission
+   * Handle Step 1 credentials form submission (Demo or MongoDB Registered User)
    */
-  handleCredentialsSubmit() {
+  async handleCredentialsSubmit() {
     const usernameInput = document.getElementById("loginUsernameInput");
     const passwordInput = document.getElementById("loginPasswordInput");
     const credError = document.getElementById("loginCredError");
+    const submitBtn = document.getElementById("loginSubmitBtn");
 
     const u = (usernameInput?.value || "").trim().toLowerCase();
     const p = passwordInput?.value || "";
 
-    const isValid = (u === DEMO_AUTH_CREDENTIALS.username || u === "ravi.sharma" || u === "owner") &&
+    const isDemo = (u === DEMO_AUTH_CREDENTIALS.username || u === "ravi.sharma" || u === "owner") &&
                     p === DEMO_AUTH_CREDENTIALS.password;
 
-    if (!isValid) {
+    if (isDemo) {
+      if (credError) credError.style.display = "none";
+      this.activeUser = DEMO_AUTH_CREDENTIALS.user;
+      this.goToStep(2);
+      return;
+    }
+
+    // Check backend API for registered user
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Authenticating...";
+      }
+
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: u, password: p })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.user) {
+        this.activeUser = data.user;
+        if (data.token) {
+          try { sessionStorage.setItem("shopsahayak_token", data.token); } catch (e) {}
+        }
+        if (window.shopStore && window.shopStore.initializeForUser) {
+          window.shopStore.initializeForUser(data.user);
+        }
+        if (credError) credError.style.display = "none";
+        this.goToStep(2);
+        return;
+      } else {
+        if (credError) {
+          credError.innerText = data.message || "Invalid credentials. Please check your email and password.";
+          credError.style.display = "flex";
+        }
+      }
+    } catch (err) {
       if (credError) {
         const lang = window.shopStore?.currentLanguage || document.documentElement.lang || "en";
         const dict = (typeof TRANSLATIONS !== "undefined" && TRANSLATIONS[lang]) ? TRANSLATIONS[lang] : {};
         credError.innerText = dict.loginInvalidCreds || "Invalid username or password. Please use the demo credentials.";
         credError.style.display = "flex";
       }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        const lang = window.shopStore?.currentLanguage || document.documentElement.lang || "en";
+        const dict = (typeof TRANSLATIONS !== "undefined" && TRANSLATIONS[lang]) ? TRANSLATIONS[lang] : {};
+        submitBtn.innerText = dict.loginNextBtn || "Continue to Face Verification →";
+      }
+    }
+  }
+
+  /**
+   * Handle Store Registration form submission
+   */
+  async handleRegisterSubmit() {
+    const ownerName = (document.getElementById("regOwnerName")?.value || "").trim();
+    const storeName = (document.getElementById("regStoreName")?.value || "").trim();
+    const email = (document.getElementById("regEmail")?.value || "").trim();
+    const phone = (document.getElementById("regPhone")?.value || "").trim();
+    const category = document.getElementById("regCategory")?.value || "Grocery & FMCG";
+    const upi = (document.getElementById("regUpi")?.value || "").trim();
+    const address = (document.getElementById("regAddress")?.value || "").trim();
+    const gstin = (document.getElementById("regGstin")?.value || "").trim();
+    const password = document.getElementById("regPassword")?.value || "";
+    const confirmPassword = document.getElementById("regConfirmPassword")?.value || "";
+
+    const regErr = document.getElementById("registerError");
+    const regSuccess = document.getElementById("registerSuccess");
+    const regSubmitBtn = document.getElementById("registerSubmitBtn");
+
+    const lang = window.shopStore?.currentLanguage || document.documentElement.lang || "en";
+    const dict = (typeof TRANSLATIONS !== "undefined" && TRANSLATIONS[lang]) ? TRANSLATIONS[lang] : {};
+
+    if (regErr) regErr.style.display = "none";
+    if (regSuccess) regSuccess.style.display = "none";
+
+    // Validations
+    if (password !== confirmPassword) {
+      if (regErr) {
+        regErr.innerText = dict.regPasswordMismatch || "Passwords do not match. Please re-enter.";
+        regErr.style.display = "flex";
+      }
       return;
     }
 
-    if (credError) credError.style.display = "none";
-    this.goToStep(2);
+    if (password.length < 6) {
+      if (regErr) {
+        regErr.innerText = dict.regPasswordTooShort || "Password must be at least 6 characters long.";
+        regErr.style.display = "flex";
+      }
+      return;
+    }
+
+    try {
+      if (regSubmitBtn) {
+        regSubmitBtn.disabled = true;
+        regSubmitBtn.innerText = "Registering store in MongoDB Atlas...";
+      }
+
+      const payload = {
+        name: ownerName,
+        storeName: storeName,
+        email: email,
+        phone: phone,
+        storeCategory: category,
+        upiId: upi,
+        address: address,
+        gstin: gstin,
+        password: password,
+        role: "owner"
+      };
+
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to register store. Please try again.");
+      }
+
+      // Registration successful!
+      if (regSuccess) {
+        regSuccess.innerText = dict.regSuccessMsg || "Store registered successfully! Launching ShopSahayak...";
+        regSuccess.style.display = "flex";
+      }
+
+      this.activeUser = data.user;
+      if (data.token) {
+        try { sessionStorage.setItem("shopsahayak_token", data.token); } catch (e) {}
+      }
+
+      // Initialize state store specifically for this registered user
+      if (window.shopStore && window.shopStore.initializeForUser) {
+        window.shopStore.initializeForUser(data.user);
+      }
+
+      // Automatically persist session and transition into application
+      this._saveSession("registered_user");
+      setTimeout(() => {
+        this.enterApp(true);
+      }, 1200);
+
+    } catch (error) {
+      if (regErr) {
+        regErr.innerText = error.message || "An error occurred during registration. Please try again.";
+        regErr.style.display = "flex";
+      }
+    } finally {
+      if (regSubmitBtn) {
+        regSubmitBtn.disabled = false;
+        regSubmitBtn.innerText = dict.registerSubmitBtn || "Register Store & Launch ShopSahayak ✦";
+      }
+    }
   }
 
   /**
@@ -538,10 +724,40 @@ class ShopAuthManager {
       window.shopAppBootstrap();
     }
 
+    // Update active user & store in UI topbar
+    try {
+      const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      const sessionUser = stored ? JSON.parse(stored).user : (this.activeUser || DEMO_AUTH_CREDENTIALS.user);
+      if (sessionUser) {
+        const userNameEl = document.querySelector(".user-name");
+        if (userNameEl && sessionUser.name) userNameEl.textContent = sessionUser.name;
+
+        const userAvatarEl = document.querySelector(".user-avatar-initials");
+        if (userAvatarEl && sessionUser.name) {
+          const initials = sessionUser.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+          userAvatarEl.textContent = initials;
+        }
+
+        const roleBadge = document.getElementById("topbarRoleBadge");
+        if (roleBadge && sessionUser.role) {
+          roleBadge.textContent = sessionUser.role.charAt(0).toUpperCase() + sessionUser.role.slice(1);
+        }
+
+        const brandSub = document.querySelector(".brand-subtitle");
+        if (brandSub && sessionUser.storeName) {
+          brandSub.textContent = sessionUser.storeName;
+        }
+      }
+    } catch (e) {}
+
     if (showToast && window.shopUI && typeof window.shopUI.showToast === "function") {
       const lang = window.shopStore?.currentLanguage || document.documentElement.lang || "en";
       const dict = (typeof TRANSLATIONS !== "undefined" && TRANSLATIONS[lang]) ? TRANSLATIONS[lang] : {};
-      window.shopUI.showToast(dict.welcomeBackToast || "Welcome back, Ravi Sharma! Store data synchronized.", "success");
+      const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      const sessionUser = stored ? JSON.parse(stored).user : (this.activeUser || DEMO_AUTH_CREDENTIALS.user);
+      const greetingName = sessionUser?.name || "Ravi Sharma";
+      const msg = (dict.welcomeBackToast || "Welcome back, Ravi Sharma! Store data synchronized.").replace("Ravi Sharma", greetingName);
+      window.shopUI.showToast(msg, "success");
     }
   }
 
@@ -554,6 +770,8 @@ class ShopAuthManager {
 
     try {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      sessionStorage.removeItem("shopsahayak_token");
+      localStorage.removeItem("shopsahayak_user_email");
     } catch (e) {}
 
     // Reset password input
@@ -580,6 +798,32 @@ class ShopAuthManager {
       loginForm.addEventListener("submit", (e) => {
         e.preventDefault();
         this.handleCredentialsSubmit();
+      });
+    }
+
+    // Registration Form Switch Buttons
+    const showRegisterBtn = document.getElementById("showRegisterBtn");
+    if (showRegisterBtn) {
+      showRegisterBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.showRegister();
+      });
+    }
+
+    const showLoginBtn = document.getElementById("showLoginFromRegBtn");
+    if (showLoginBtn) {
+      showLoginBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.showLogin(1);
+      });
+    }
+
+    // Registration Form Submission
+    const registerForm = document.getElementById("registerStoreForm");
+    if (registerForm) {
+      registerForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        this.handleRegisterSubmit();
       });
     }
 

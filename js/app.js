@@ -88,6 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ------------------------------------------------------------------------
   function renderAllViews() {
     renderDashboardKPIs();
+    renderOverviewInsightBanners();
     renderInventoryHealthBar();
     renderTopSellingProductsTable();
     renderUrgentRestockList();
@@ -102,10 +103,129 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   let isAppBootstrapped = false;
-  window.shopAppBootstrap = function() {
-    if (isAppBootstrapped) return;
+  window.shopAppBootstrap = async function() {
     isAppBootstrapped = true;
     document.documentElement.lang = store.currentLanguage || "en";
+
+    // 1. Detect authenticated user from session
+    let sessionUser = null;
+    try {
+      const sessionRaw = sessionStorage.getItem("shopsahayak_session");
+      sessionUser = sessionRaw ? JSON.parse(sessionRaw).user : null;
+    } catch(e) {}
+
+    // 2. Initialize and partition store state specifically for this user
+    if (sessionUser && store.initializeForUser) {
+      store.initializeForUser(sessionUser);
+    }
+
+    // 3. Personalize AI Copilot greeting
+    if (aiEngine && aiEngine.initWelcomeMessage) {
+      aiEngine.initWelcomeMessage(sessionUser);
+    }
+
+    // 4. Update Walkthrough Banner & Quick Start
+    const demoStepBadge = document.getElementById("demoStepBadge");
+    const demoStepText = document.getElementById("demoStepText");
+    const demoPrevBtn = document.getElementById("demoPrevBtn");
+    const demoNextBtn = document.getElementById("demoNextBtn");
+
+    if (store.isNewRegisteredStore && sessionUser) {
+      if (demoStepBadge) demoStepBadge.textContent = "Store Active";
+      if (demoStepText) {
+        demoStepText.innerHTML = `<strong>Store Session Active:</strong> ${escapeHtml(sessionUser.name)} managing <strong>${escapeHtml(sessionUser.storeName)}</strong> (${escapeHtml(sessionUser.storeCategory || 'Kirana & Retail')}). Overview synchronized.`;
+      }
+      if (demoPrevBtn) demoPrevBtn.style.display = "none";
+      if (demoNextBtn) {
+        demoNextBtn.textContent = "+ Record First Sale";
+        demoNextBtn.onclick = () => window.shopUI.openNewSaleModal();
+      }
+    } else {
+      if (demoPrevBtn) demoPrevBtn.style.display = "";
+      if (demoNextBtn) {
+        demoNextBtn.textContent = "Next Step →";
+        demoNextBtn.onclick = null;
+      }
+    }
+
+    // 5. Update Topbar & Sidebar Brand
+    if (sessionUser) {
+      const brandSub = document.querySelector(".brand-subtitle");
+      if (brandSub && sessionUser.storeName) brandSub.textContent = sessionUser.storeName;
+      const userNameEl = document.querySelector(".user-name");
+      if (userNameEl && sessionUser.name) userNameEl.textContent = sessionUser.name;
+      const userAvatarEl = document.querySelector(".user-avatar-initials");
+      if (userAvatarEl && sessionUser.name) {
+        userAvatarEl.textContent = sessionUser.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+      }
+      const roleBadge = document.getElementById("topbarRoleBadge");
+      if (roleBadge && sessionUser.role) {
+        roleBadge.textContent = sessionUser.role.charAt(0).toUpperCase() + sessionUser.role.slice(1);
+      }
+    }
+
+    // 6. Pre-fill Settings inputs
+    const settingsTrade = document.getElementById("settingsTradeName");
+    const settingsGstin = document.getElementById("settingsGstin");
+    const settingsOwner = document.getElementById("settingsOwnerName");
+    const settingsPhone = document.getElementById("settingsPhone");
+    const settingsAddress = document.getElementById("settingsAddress");
+    if (settingsTrade) settingsTrade.value = store.profile.storeName || '';
+    if (settingsGstin) settingsGstin.value = store.profile.gstin || '';
+    if (settingsOwner) settingsOwner.value = store.profile.ownerName || '';
+    if (settingsPhone) settingsPhone.value = store.profile.phone || '';
+    if (settingsAddress) settingsAddress.value = store.profile.address || '';
+
+    // 7. Synchronize live data from MongoDB Atlas backend if online
+    if (window.shopApi) {
+      try {
+        const isOnline = await window.shopApi.checkBackendHealth();
+        if (isOnline) {
+          const userEmail = sessionUser?.email;
+          const [productsRes, salesRes, customersRes, suppliersRes, notifsRes, metricsRes] = await Promise.allSettled([
+            window.shopApi.getProducts({ userEmail }),
+            window.shopApi.getSales({ userEmail }),
+            window.shopApi.getCustomers({ userEmail }),
+            window.shopApi.getSuppliers({ userEmail }),
+            window.shopApi.getNotifications({ userEmail }),
+            window.shopApi.getMetrics({ userEmail })
+          ]);
+
+          if (productsRes.status === 'fulfilled' && productsRes.value?.success && Array.isArray(productsRes.value?.data)) {
+            if (productsRes.value.data.length > 0 || store.isNewRegisteredStore) {
+              store.products = productsRes.value.data.map(p => ({ ...p, id: p.id || p._id }));
+            }
+          }
+          if (salesRes.status === 'fulfilled' && salesRes.value?.success && Array.isArray(salesRes.value?.data)) {
+            if (salesRes.value.data.length > 0 || store.isNewRegisteredStore) {
+              store.transactions = salesRes.value.data.map(t => ({ ...t, id: t.id || t._id }));
+            }
+          }
+          if (customersRes.status === 'fulfilled' && customersRes.value?.success && Array.isArray(customersRes.value?.data)) {
+            if (customersRes.value.data.length > 0 || store.isNewRegisteredStore) {
+              store.customers = customersRes.value.data.map(c => ({ ...c, id: c.id || c._id }));
+            }
+          }
+          if (suppliersRes.status === 'fulfilled' && suppliersRes.value?.success && Array.isArray(suppliersRes.value?.data)) {
+            if (suppliersRes.value.data.length > 0 || store.isNewRegisteredStore) {
+              store.suppliers = suppliersRes.value.data.map(s => ({ ...s, id: s.id || s._id }));
+            }
+          }
+          if (notifsRes.status === 'fulfilled' && notifsRes.value?.success && Array.isArray(notifsRes.value?.data) && notifsRes.value.data.length > 0) {
+            store.notifications = notifsRes.value.data.map(n => ({ ...n, id: n.id || n._id }));
+          }
+          if (metricsRes.status === 'fulfilled' && metricsRes.value?.success && metricsRes.value?.data) {
+            store.metrics = { ...store.metrics, ...metricsRes.value.data };
+          }
+
+          store.recalculateStockCounts();
+          store.recalculateProfitMetrics();
+        }
+      } catch (err) {
+        console.warn('[ShopSahayak] Backend sync notice:', err);
+      }
+    }
+
     renderAllViews();
     renderSalesChart();
     renderAiChatThread(aiEngine.chatHistory);
@@ -133,18 +253,104 @@ document.addEventListener("DOMContentLoaded", () => {
     const stockElem = document.getElementById("kpiLowStockVal");
     const custElem = document.getElementById("kpiCustomersVal");
 
-    if (revElem) revElem.innerText = `₹${store.metrics.todayRevenue.toLocaleString('en-IN')}`;
-    if (ordElem) ordElem.innerText = store.metrics.todayOrders;
-    if (profElem) profElem.innerText = `₹${store.metrics.estimatedProfit.toLocaleString('en-IN')}`;
-    if (stockElem) stockElem.innerText = store.metrics.lowStockCount;
-    if (custElem) custElem.innerText = store.metrics.activeCustomers;
+    if (revElem) revElem.innerText = `₹${(store.metrics.todayRevenue || 0).toLocaleString('en-IN')}`;
+    if (ordElem) ordElem.innerText = store.metrics.todayOrders || 0;
+    if (profElem) profElem.innerText = `₹${(store.metrics.estimatedProfit || 0).toLocaleString('en-IN')}`;
+    if (stockElem) stockElem.innerText = store.metrics.lowStockCount || 0;
+    if (custElem) custElem.innerText = store.metrics.activeCustomers || 0;
+
+    const custTrendSub = document.querySelector("#kpiCustomersVal + .kpi-footer .trend-subtext");
+    if (custTrendSub) {
+      if (store.metrics.activeCustomers === 0) {
+        custTrendSub.innerText = "0 regular, 0 walk-in";
+      } else {
+        custTrendSub.innerText = `${store.metrics.activeCustomers} accounts on ledger`;
+      }
+    }
+  }
+
+  function renderOverviewInsightBanners() {
+    const banner = document.getElementById("dashAiBanner");
+    if (!banner) return;
+
+    if (store.isNewRegisteredStore && store.products.length === 0) {
+      banner.innerHTML = `
+        <div class="insight-card insight-demand" style="cursor: pointer;" onclick="window.shopUI.openAddProductModal()">
+          <div class="insight-top-meta">
+            <span class="badge badge-ai">✦ Step 1: Inventory</span>
+            <span style="font-size:var(--font-size-xs); color:var(--color-text-muted);">Quick Setup</span>
+          </div>
+          <div class="insight-body-text">Add your store products to begin.</div>
+          <div class="insight-subtext">Add product name, category, purchase price & selling price to track stock and calculate live profits.</div>
+          <a class="insight-action-link">+ Add Your First Product →</a>
+        </div>
+
+        <div class="insight-card insight-risk" style="cursor: pointer;" onclick="window.shopUI.openNewSaleModal()">
+          <div class="insight-top-meta">
+            <span class="badge badge-warning">🧾 Step 2: POS Billing</span>
+            <span style="font-size:var(--font-size-xs); color:var(--color-text-muted);">Instant Billing</span>
+          </div>
+          <div class="insight-body-text">Record customer purchases with instant bill.</div>
+          <div class="insight-subtext">Supports UPI QR payments, Cash, and Khata credit with automated real-time stock deduction.</div>
+          <a class="insight-action-link">+ Record First Sale →</a>
+        </div>
+
+        <div class="insight-card insight-margin" style="cursor: pointer;" onclick="window.shopUI.openAddCustomerModal()">
+          <div class="insight-top-meta">
+            <span class="badge badge-success">👥 Step 3: Khata Ledger</span>
+            <span style="font-size:var(--font-size-xs); color:var(--color-text-muted);">Store Ledger</span>
+          </div>
+          <div class="insight-body-text">Add customers & wholesale suppliers.</div>
+          <div class="insight-subtext">Maintain customer ledger balances with WhatsApp reminder links and track distributor purchases.</div>
+          <a class="insight-action-link">+ Add Customer / Supplier →</a>
+        </div>
+      `;
+      return;
+    }
+
+    // Dynamic insights for active stores
+    const lowStock = store.products.filter(p => p.status === 'low' || p.status === 'out');
+    const lowStockNames = lowStock.map(p => p.name).slice(0, 2).join(", ");
+    const avgMargin = Math.round(store.getCatalogAverageMargin() * 100);
+
+    banner.innerHTML = `
+      <div class="insight-card insight-demand">
+        <div class="insight-top-meta">
+          <span class="badge badge-ai">✦ Demand Status</span>
+          <span style="font-size:var(--font-size-xs); color:var(--color-text-muted);">AI Forecast</span>
+        </div>
+        <div class="insight-body-text">${store.transactions.length > 0 ? `${store.metrics.todayOrders} orders processed today.` : 'Ready for customer billing.'}</div>
+        <div class="insight-subtext">${store.transactions.length > 0 ? `Today's revenue is ₹${store.metrics.todayRevenue.toLocaleString('en-IN')}. Estimated profit: ₹${store.metrics.estimatedProfit.toLocaleString('en-IN')}.` : 'Billing transactions will automatically generate sales velocity and peak hour demand insights.'}</div>
+        <a class="insight-action-link" onclick="window.shopUI.openNewSaleModal()">+ Record New Sale →</a>
+      </div>
+
+      <div class="insight-card insight-risk">
+        <div class="insight-top-meta">
+          <span class="badge ${lowStock.length > 0 ? 'badge-warning' : 'badge-success'}">${lowStock.length > 0 ? '⚠ Stock Risk' : '✓ Stock Healthy'}</span>
+          <span style="font-size:var(--font-size-xs); color:var(--color-text-muted);">${lowStock.length > 0 ? 'Restock Needed' : 'Protected'}</span>
+        </div>
+        <div class="insight-body-text">${lowStock.length > 0 ? `${lowStock.length} items below minimum safety level.` : 'All active products have adequate buffer.'}</div>
+        <div class="insight-subtext">${lowStock.length > 0 ? `${lowStockNames} reaching safety threshold.` : 'Inventory buffer levels are currently above minimum requirements.'}</div>
+        <a class="insight-action-link" onclick="window.shopUI.switchView('inventory')">Review Inventory →</a>
+      </div>
+
+      <div class="insight-card insight-margin">
+        <div class="insight-top-meta">
+          <span class="badge badge-success">📈 Margin Deal</span>
+          <span style="font-size:var(--font-size-xs); color:var(--color-text-muted);">Catalogue Profit</span>
+        </div>
+        <div class="insight-body-text">Average store margin is ~${avgMargin}%.</div>
+        <div class="insight-subtext">${store.suppliers.length > 0 ? `${store.suppliers.length} active wholesale suppliers linked to your store account.` : 'Add wholesale suppliers to optimize bulk purchase discounts.'}</div>
+        <a class="insight-action-link" onclick="window.shopUI.switchView('suppliers')">View Suppliers →</a>
+      </div>
+    `;
   }
 
   function renderInventoryHealthBar() {
     const total = store.products.length;
-    const healthyPct = Math.round((store.metrics.healthyStockCount / total) * 100);
-    const lowPct = Math.round((store.metrics.lowStockCount / total) * 100);
-    const outPct = Math.round((store.metrics.outOfStockCount / total) * 100);
+    const healthyPct = total > 0 ? Math.round((store.metrics.healthyStockCount / total) * 100) : 0;
+    const lowPct = total > 0 ? Math.round((store.metrics.lowStockCount / total) * 100) : 0;
+    const outPct = total > 0 ? Math.round((store.metrics.outOfStockCount / total) * 100) : 0;
 
     const barHealthy = document.getElementById("healthBarHealthy");
     const barLow = document.getElementById("healthBarLow");
@@ -162,6 +368,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (countLow) countLow.innerText = `${store.metrics.lowStockCount} SKUs (${lowPct}%)`;
     if (countOut) countOut.innerText = `${store.metrics.outOfStockCount} SKUs (${outPct}%)`;
 
+    const badge = document.getElementById("invActiveSkusBadge");
+    if (badge) badge.innerText = `${total} Active SKUs`;
+
     const pill = document.getElementById("sidebarLowStockPill");
     if (pill) {
       const dict = TRANSLATIONS[store.currentLanguage] || TRANSLATIONS.en;
@@ -172,6 +381,17 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderSalesChart() {
     const container = document.getElementById("salesChartContainer");
     if (!container) return;
+
+    if (store.isNewRegisteredStore && store.transactions.length === 0) {
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; text-align: center; color: var(--color-text-subtle); padding: 20px;">
+          <div style="font-size: 32px; margin-bottom: 8px;">📈</div>
+          <div style="font-weight: 700; font-size: 14px; color: var(--color-text-primary); margin-bottom: 4px;">Day 1 Sales Overview</div>
+          <div style="font-size: 12.5px; max-width: 420px; line-height: 1.4;">Sales trajectory & revenue graphs will plot dynamically here once you process your store's customer billing transactions.</div>
+        </div>
+      `;
+      return;
+    }
 
     // SVG Line Chart with gradient fill & interactive points
     container.innerHTML = `
@@ -256,6 +476,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
     const topItems = store.products.slice(0, 5);
 
+    if (topItems.length === 0 || (store.isNewRegisteredStore && store.transactions.length === 0)) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 28px; color: var(--color-text-subtle);">
+            <div>No sales recorded yet. Your best-selling products will appear here as you bill customers.</div>
+            <button class="btn btn-sm btn-primary" onclick="window.shopUI.openNewSaleModal()" style="margin-top: 8px;">+ Record First Sale</button>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
     tbody.innerHTML = topItems.map(p => {
       const statusBadge = getLocalizedStatusBadge(p.status, lang, p.stock);
       const catName = getLocalizedCategory(p.category, lang);
@@ -289,6 +521,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
     const urgentItems = store.products.filter(p => p.status === "low" || p.status === "out").slice(0, 3);
 
+    if (urgentItems.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 24px; color: var(--color-text-subtle); font-size: var(--font-size-sm);">
+          ✓ All product stock levels are healthy!
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = urgentItems.map(p => `
       <div class="restock-item-row">
         <div class="restock-item-left">
@@ -312,7 +553,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const list = filteredProducts || store.products;
 
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-state-title">No products found</div><div class="empty-state-text">Try changing your search terms or filters</div></div></td></tr>`;
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" style="text-align:center; padding: 36px;">
+            <div style="font-size: 26px; margin-bottom: 8px;">📦</div>
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 6px;">Your product catalogue is empty</div>
+            <div style="font-size: 13px; color: var(--color-text-subtle); margin-bottom: 16px;">Add your store's items or load standard Kirana essentials with one click.</div>
+            <button class="btn btn-primary" onclick="window.shopUI.openAddProductModal()">+ Add Product</button>
+            <button class="btn btn-secondary" onclick="window.shopStore.loadSampleCatalog(); window.shopUI.showToast('Sample catalogue loaded!', 'success');" style="margin-left: 8px;">⚡ Load 15 Sample SKUs</button>
+          </td>
+        </tr>`;
       return;
     }
 
@@ -351,6 +601,43 @@ document.addEventListener("DOMContentLoaded", () => {
     const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
     const list = filteredInventory || store.products;
 
+    // Update Top Summary KPI Cards in Inventory View
+    const totalVal = document.getElementById("invTotalSkusVal");
+    const healthyVal = document.getElementById("invHealthyCardVal");
+    const lowVal = document.getElementById("invLowCardVal");
+    const outVal = document.getElementById("invOutCardVal");
+    const lowBadge = document.getElementById("invLowBadge");
+    const outBadge = document.getElementById("invOutBadge");
+
+    if (totalVal) totalVal.innerText = store.products.length;
+    if (healthyVal) healthyVal.innerText = store.metrics.healthyStockCount || 0;
+    if (lowVal) lowVal.innerText = store.metrics.lowStockCount || 0;
+    if (outVal) outVal.innerText = store.metrics.outOfStockCount || 0;
+
+    if (lowBadge) {
+      const hasLow = (store.metrics.lowStockCount || 0) > 0;
+      lowBadge.innerText = hasLow ? "Action recommended" : "Buffer safe";
+      lowBadge.className = hasLow ? "badge badge-warning" : "badge badge-success";
+    }
+    if (outBadge) {
+      const outProd = store.products.find(p => p.stock === 0);
+      outBadge.innerText = outProd ? outProd.name : "None";
+      outBadge.className = outProd ? "badge badge-danger" : "badge badge-neutral";
+    }
+
+    if (list.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center; padding: 40px;">
+            <div style="font-size: 28px; margin-bottom: 8px;">📦</div>
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 6px;">No products in inventory yet</div>
+            <div style="font-size: 13px; color: var(--color-text-subtle); margin-bottom: 16px;">Add items to your catalogue to track stock levels, safety buffers, and restock alerts.</div>
+            <button class="btn btn-primary" onclick="window.shopUI.openAddProductModal()">+ Add Your First Product</button>
+          </td>
+        </tr>`;
+      return;
+    }
+
     tbody.innerHTML = list.map(p => {
       const badge = getLocalizedStatusBadge(p.status, lang);
 
@@ -385,6 +672,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const lang = store.currentLanguage;
     const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
+    if (store.transactions.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center; padding: 40px;">
+            <div style="font-size: 26px; margin-bottom: 8px;">🧾</div>
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 6px;">No sales transactions yet</div>
+            <div style="font-size: 13px; color: var(--color-text-subtle); margin-bottom: 16px;">Process your first customer billing transaction to start tracking revenue and profits.</div>
+            <button class="btn btn-primary" onclick="window.shopUI.openNewSaleModal()">+ Record New Sale</button>
+          </td>
+        </tr>`;
+      return;
+    }
+
     tbody.innerHTML = store.transactions.map(t => `
       <tr>
         <td style="font-family:var(--font-family-mono); font-weight:600;">${escapeHtml(t.id)}</td>
@@ -407,6 +707,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const lang = store.currentLanguage;
     const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
+
+    if (store.customers.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center; padding: 40px;">
+            <div style="font-size: 28px; margin-bottom: 8px;">👥</div>
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 6px;">No customer accounts yet</div>
+            <div style="font-size: 13px; color: var(--color-text-subtle); margin-bottom: 16px;">Add customer profiles to track purchase histories and maintain Khata credit (Udhar).</div>
+            <button class="btn btn-primary" onclick="window.shopUI.openAddCustomerModal()">+ Add First Customer</button>
+          </td>
+        </tr>`;
+      return;
+    }
 
     tbody.innerHTML = store.customers.map(c => `
       <tr style="cursor:pointer;" onclick="window.shopUI.openCustomerDrawer('${c.id}')">
@@ -445,6 +758,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const lang = store.currentLanguage;
     const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
+    if (store.suppliers.length === 0) {
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 48px; background: var(--color-surface); border: 1px dashed var(--color-border); border-radius: var(--radius-lg);">
+          <div style="font-size: 36px; margin-bottom: 10px;">🏢</div>
+          <div style="font-weight: 700; font-size: 16px; margin-bottom: 6px;">No wholesale suppliers added yet</div>
+          <div style="color: var(--color-text-subtle); font-size: 13px; margin-bottom: 18px;">Add your distributors to manage restocking orders, purchase histories, and supplier contacts.</div>
+          <button class="btn btn-primary" onclick="window.shopUI.openAddSupplierModal()">+ Add Wholesale Supplier</button>
+        </div>
+      `;
+      return;
+    }
+
     grid.innerHTML = store.suppliers.map(s => `
       <div class="supplier-card">
         <div class="supplier-card-header">
@@ -455,22 +780,22 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="badge badge-success">${dict.healthy === 'సరిపడా ఉంది' ? 'యాక్టివ్' : (dict.healthy === 'पर्याप्त' ? 'सक्रिय' : 'Active')}</span>
         </div>
         <div class="supplier-contact-row">
-          <span>👤 ${escapeHtml(s.contactPerson)}</span>
+          <span>👤 ${escapeHtml(s.contactPerson || 'Direct Agent')}</span>
           <span>•</span>
-          <span>📞 ${escapeHtml(s.phone)}</span>
+          <span>📞 ${escapeHtml(s.phone || 'Contact provided')}</span>
         </div>
         <div class="supplier-stats-row">
           <div>
             <div style="font-size:var(--font-size-xs); color:var(--color-text-muted);">${dict.totalPurchasedLabel}</div>
-            <div style="font-weight:700; font-size:var(--font-size-base);">₹${s.totalPurchased.toLocaleString('en-IN')}</div>
+            <div style="font-weight:700; font-size:var(--font-size-base);">₹${(s.totalPurchased || 0).toLocaleString('en-IN')}</div>
           </div>
           <div>
             <div style="font-size:var(--font-size-xs); color:var(--color-text-muted);">${dict.pendingOrdersLabel}</div>
-            <div style="font-weight:700; font-size:var(--font-size-base); color:var(--color-brand-accent);">${s.pendingOrders}</div>
+            <div style="font-weight:700; font-size:var(--font-size-base); color:var(--color-brand-accent);">${s.pendingOrders || 0}</div>
           </div>
         </div>
         <div style="display:flex; gap:8px; margin-top:4px;">
-          <button class="btn btn-sm btn-primary" style="flex:1;" onclick="window.shopUI.openRestockModal('PROD-001')">${dict.createPoBtn}</button>
+          <button class="btn btn-sm btn-primary" style="flex:1;" onclick="window.shopUI.openNewPurchaseOrderModal('${s.id}')">${dict.createPoBtn}</button>
           <a href="tel:${escapeHtml(s.phone)}" class="btn btn-sm btn-secondary" style="text-decoration:none;">${dict.callBtn}</a>
         </div>
       </div>

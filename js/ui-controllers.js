@@ -173,6 +173,9 @@ class UIController {
       onConfirm: () => {
         const poNumber = this.store.getNextPONumber();
         this.store.restockProduct(prod.id, numQty, finalSupplier, poNumber);
+        if (window.shopApi) {
+          window.shopApi.restockProduct(prod.id, numQty, finalSupplier).catch(e => console.warn(e));
+        }
 
         if (actionCardId && this.aiEngine) {
           this.aiEngine.finalizeActionCardApproval(actionCardId, poNumber, numQty, finalCost);
@@ -235,6 +238,19 @@ class UIController {
       unit,
       supplierName
     });
+
+    if (window.shopApi) {
+      window.shopApi.addProduct({
+        name,
+        category,
+        purchasePrice,
+        sellingPrice,
+        stock,
+        minStock,
+        unit,
+        supplierName
+      }).catch(e => console.warn(e));
+    }
 
     this.closeAddProductModal();
     this.showToast(`Product "${item.name}" successfully added to catalogue!`, "success");
@@ -354,6 +370,16 @@ class UIController {
       itemsCount: 2
     });
 
+    if (window.shopApi) {
+      window.shopApi.createSale({
+        customer: custName,
+        amount: amount,
+        itemsSummary: summary,
+        paymentMethod: method,
+        itemsCount: 2
+      }).catch(e => console.warn(e));
+    }
+
     this.closeNewSaleModal();
     this.showToast(`Sale of ₹${amount} recorded successfully! Order #${tx.id}`, "success");
   }
@@ -397,6 +423,224 @@ class UIController {
         window.print();
       }, 300);
     }
+  }
+
+  // ------------------------------------------------------------------------
+  // CUSTOMER MODAL
+  // ------------------------------------------------------------------------
+  openAddCustomerModal() {
+    const modal = document.getElementById("addCustomerModal");
+    if (modal) modal.classList.add("active");
+  }
+
+  closeAddCustomerModal() {
+    const modal = document.getElementById("addCustomerModal");
+    if (modal) modal.classList.remove("active");
+  }
+
+  async handleSaveCustomer() {
+    const name = document.getElementById("custNameInput")?.value.trim();
+    const phone = document.getElementById("custPhoneInput")?.value.trim() || "";
+    const type = document.getElementById("custTypeSelect")?.value || "Regular";
+    const khata = Number(document.getElementById("custInitialKhata")?.value) || 0;
+
+    if (!name) {
+      this.showToast("Please enter customer name", "alert");
+      return;
+    }
+
+    const newCust = this.store.addCustomer({
+      name,
+      phone,
+      type,
+      khataBalance: khata,
+      ordersCount: khata > 0 ? 1 : 0,
+      totalSpend: khata,
+      lastPurchase: "Just now"
+    });
+
+    if (window.shopApi) {
+      await window.shopApi.createCustomer({
+        name,
+        phone,
+        type,
+        khataBalance: khata,
+        ordersCount: khata > 0 ? 1 : 0,
+        totalSpend: khata,
+        lastPurchase: "Just now"
+      }).catch(e => console.warn(e));
+    }
+
+    this.closeAddCustomerModal();
+    this.showToast(`Customer "${name}" added to store ledger!`, "success");
+
+    if (document.getElementById("custNameInput")) document.getElementById("custNameInput").value = "";
+    if (document.getElementById("custPhoneInput")) document.getElementById("custPhoneInput").value = "";
+    if (document.getElementById("custInitialKhata")) document.getElementById("custInitialKhata").value = "";
+  }
+
+  // ------------------------------------------------------------------------
+  // SUPPLIER MODAL
+  // ------------------------------------------------------------------------
+  openAddSupplierModal() {
+    const modal = document.getElementById("addSupplierModal");
+    if (modal) modal.classList.add("active");
+  }
+
+  closeAddSupplierModal() {
+    const modal = document.getElementById("addSupplierModal");
+    if (modal) modal.classList.remove("active");
+  }
+
+  async handleSaveSupplier() {
+    const name = document.getElementById("suppNameInput")?.value.trim();
+    const category = document.getElementById("suppCategoryInput")?.value.trim() || "General Wholesale";
+    const contact = document.getElementById("suppContactInput")?.value.trim() || "";
+    const phone = document.getElementById("suppPhoneInput")?.value.trim() || "";
+
+    if (!name) {
+      this.showToast("Please enter supplier or agency name", "alert");
+      return;
+    }
+
+    const newSupp = this.store.addSupplier({
+      name,
+      category,
+      contactPerson: contact,
+      phone,
+      status: "Active"
+    });
+
+    if (window.shopApi) {
+      await window.shopApi.createSupplier({
+        name,
+        category,
+        contactPerson: contact,
+        phone,
+        status: "Active"
+      }).catch(e => console.warn(e));
+    }
+
+    this.closeAddSupplierModal();
+    this.showToast(`Wholesale supplier "${name}" added successfully!`, "success");
+
+    if (document.getElementById("suppNameInput")) document.getElementById("suppNameInput").value = "";
+    if (document.getElementById("suppCategoryInput")) document.getElementById("suppCategoryInput").value = "";
+    if (document.getElementById("suppContactInput")) document.getElementById("suppContactInput").value = "";
+    if (document.getElementById("suppPhoneInput")) document.getElementById("suppPhoneInput").value = "";
+  }
+
+  // ------------------------------------------------------------------------
+  // PURCHASE ORDER MODAL
+  // ------------------------------------------------------------------------
+  openNewPurchaseOrderModal(supplierId) {
+    const modal = document.getElementById("newPurchaseOrderModal");
+    if (!modal) return;
+    const suppSelect = document.getElementById("poSupplierSelect");
+    if (suppSelect) {
+      if (this.store.suppliers && this.store.suppliers.length > 0) {
+        suppSelect.innerHTML = this.store.suppliers.map(s => 
+          `<option value="${s.id}" ${s.id === supplierId ? 'selected' : ''}>${escapeHtml(s.name)} (${escapeHtml(s.category)})</option>`
+        ).join("");
+      } else {
+        suppSelect.innerHTML = `<option value="SUP-001">Direct Wholesale</option>`;
+      }
+    }
+    modal.classList.add("active");
+  }
+
+  closeNewPurchaseOrderModal() {
+    const modal = document.getElementById("newPurchaseOrderModal");
+    if (modal) modal.classList.remove("active");
+  }
+
+  async handleSavePurchaseOrder() {
+    const prodName = document.getElementById("poProductNameInput")?.value.trim();
+    const suppSelect = document.getElementById("poSupplierSelect");
+    const suppId = suppSelect?.value;
+    const suppObj = this.store.suppliers.find(s => s.id === suppId);
+    const suppName = suppObj ? suppObj.name : (suppSelect?.options[suppSelect?.selectedIndex]?.text || "Direct Wholesale");
+    const qty = Number(document.getElementById("poQuantityInput")?.value) || 1;
+    const unit = document.getElementById("poUnitInput")?.value || "units";
+    const unitPrice = Number(document.getElementById("poUnitPriceInput")?.value) || 0;
+    const totalAmount = qty * unitPrice;
+
+    if (!prodName) {
+      this.showToast("Please enter an item or product name", "alert");
+      return;
+    }
+
+    const poNumber = this.store.getNextPONumber();
+
+    if (suppObj) {
+      suppObj.pendingOrders += 1;
+      suppObj.totalPurchased += totalAmount;
+      suppObj.lastOrderDate = "Today";
+      this.store.notify("supplier_updated", suppObj);
+    }
+
+    if (window.shopApi) {
+      await window.shopApi.createPurchaseOrder({
+        poNumber,
+        productName: prodName,
+        supplierId: suppId || "SUP-001",
+        supplierName: suppName,
+        quantity: qty,
+        unit,
+        unitPrice,
+        totalAmount
+      }).catch(e => console.warn(e));
+    }
+
+    this.closeNewPurchaseOrderModal();
+    this.showToast(`Purchase order ${poNumber} for ${prodName} approved and created!`, "success");
+
+    this.store.notifications.unshift({
+      id: "NOTIF-" + Date.now(),
+      category: "Orders",
+      severity: "success",
+      title: `PO Dispatched (${poNumber})`,
+      message: `Ordered ${qty} ${unit} of ${prodName} from ${suppName} (₹${totalAmount.toLocaleString('en-IN')}).`,
+      time: "Just now",
+      read: false
+    });
+    this.store.notify("supplier_added");
+  }
+
+  // ------------------------------------------------------------------------
+  // SAVE STORE PROFILE SETTINGS
+  // ------------------------------------------------------------------------
+  async saveStoreProfileSettings() {
+    const tradeName = document.getElementById("settingsTradeName")?.value.trim() || this.store.profile.storeName;
+    const gstin = document.getElementById("settingsGstin")?.value.trim() || "";
+    const ownerName = document.getElementById("settingsOwnerName")?.value.trim() || this.store.profile.ownerName;
+    const phone = document.getElementById("settingsPhone")?.value.trim() || this.store.profile.phone;
+    const address = document.getElementById("settingsAddress")?.value.trim() || this.store.profile.address;
+
+    this.store.profile = {
+      ...this.store.profile,
+      storeName: tradeName,
+      gstin: gstin,
+      ownerName: ownerName,
+      phone: phone,
+      address: address
+    };
+
+    // Update Topbar and Sidebar
+    const storeNameEls = document.querySelectorAll(".brand-subtitle, .topbar-store-name");
+    storeNameEls.forEach(el => el.textContent = tradeName);
+    const ownerNameEl = document.querySelector(".user-name");
+    if (ownerNameEl) ownerNameEl.textContent = ownerName;
+
+    if (window.shopApi) {
+      try {
+        await window.shopApi.updateStoreProfile(this.store.profile);
+      } catch (e) {
+        console.warn('Profile save sync error:', e);
+      }
+    }
+
+    this.showToast("Store profile details saved & synced to MongoDB!", "success");
   }
 }
 

@@ -35,6 +35,92 @@ class StoreState {
     this.recalculateProfitMetrics();
   }
 
+  /**
+   * Initialize and partition store state specifically for the authenticated user
+   * @param {Object} user
+   */
+  initializeForUser(user) {
+    if (!user) return;
+    const isDemo = !user.email || user.email === 'ravi.sharma@kiranaos.in' || user.username === 'ravi';
+
+    if (isDemo) {
+      this.profile = { ...INITIAL_STORE_PROFILE };
+      this.products = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
+      this.suppliers = JSON.parse(JSON.stringify(INITIAL_SUPPLIERS));
+      this.customers = JSON.parse(JSON.stringify(INITIAL_CUSTOMERS));
+      this.transactions = JSON.parse(JSON.stringify(INITIAL_TRANSACTIONS));
+      this.notifications = JSON.parse(JSON.stringify(INITIAL_NOTIFICATIONS));
+      this.metrics = {
+        todayRevenue: 18450,
+        todayOrders: 47,
+        estimatedProfit: 0,
+        activeCustomers: 24,
+        lowStockCount: 0,
+        healthyStockCount: 0,
+        outOfStockCount: 0
+      };
+      this.isNewRegisteredStore = false;
+    } else {
+      // Brand new registered store overview
+      this.isNewRegisteredStore = true;
+      this.profile = {
+        storeName: user.storeName || 'Kirana Store',
+        tagline: `${user.storeCategory || 'General Retail'} • AI Operating System`,
+        ownerName: user.name || 'Store Owner',
+        phone: user.phone || '',
+        email: user.email || '',
+        gstin: user.gstin || '',
+        address: user.address || '',
+        upiId: user.upiId || '',
+        operatingHours: '08:00 AM - 10:00 PM',
+        currencySymbol: '₹',
+        posStatus: 'Online • Synced'
+      };
+      this.products = [];
+      this.transactions = [];
+      this.customers = [];
+      this.suppliers = [];
+      this.notifications = [
+        {
+          id: 'NOTIF-WELCOME-' + Date.now(),
+          category: 'Store',
+          severity: 'success',
+          title: 'Store Account Ready',
+          message: `Welcome ${user.name}! ${user.storeName} is successfully set up and ready for your retail operations.`,
+          time: 'Just now',
+          read: false
+        }
+      ];
+      this.metrics = {
+        todayRevenue: 0,
+        todayOrders: 0,
+        estimatedProfit: 0,
+        activeCustomers: 0,
+        lowStockCount: 0,
+        healthyStockCount: 0,
+        outOfStockCount: 0
+      };
+    }
+
+    this.recalculateStockCounts();
+    this.recalculateProfitMetrics();
+  }
+
+  /**
+   * One-click starter catalogue generator for newly registered stores
+   */
+  loadSampleCatalog() {
+    this.products = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
+    this.recalculateStockCounts();
+    this.recalculateProfitMetrics();
+    this.notify("product_added");
+    if (window.shopApi && this.profile.email) {
+      this.products.forEach(p => {
+        window.shopApi.addProduct({ ...p, userEmail: this.profile.email }).catch(() => {});
+      });
+    }
+  }
+
   getNextPONumber() {
     const po = `PO-${this.nextPoCounter}`;
     this.nextPoCounter += 1;
@@ -191,6 +277,45 @@ class StoreState {
 
     this.notify("sale_completed", transaction);
     return transaction;
+  }
+
+  addCustomer(customerData) {
+    const id = customerData.id || "CUST-" + String(this.customers.length + 1).padStart(3, "0");
+    const item = {
+      id,
+      name: customerData.name,
+      phone: customerData.phone || "",
+      type: customerData.type || "Regular",
+      ordersCount: Number(customerData.ordersCount) || 0,
+      totalSpend: Number(customerData.totalSpend) || 0,
+      khataBalance: Number(customerData.khataBalance) || 0,
+      lastPurchase: customerData.lastPurchase || "Just now",
+      favoriteCategory: customerData.favoriteCategory || "General",
+      aiInsight: customerData.aiInsight || "New customer added to store ledger."
+    };
+    this.customers.unshift(item);
+    this.metrics.activeCustomers = this.customers.length;
+    this.notify("customer_added", item);
+    return item;
+  }
+
+  addSupplier(supplierData) {
+    const id = supplierData.id || "SUP-" + String(this.suppliers.length + 1).padStart(3, "0");
+    const item = {
+      id,
+      name: supplierData.name,
+      category: supplierData.category || "General Wholesale",
+      contactPerson: supplierData.contactPerson || "",
+      phone: supplierData.phone || "",
+      email: supplierData.email || "",
+      pendingOrders: Number(supplierData.pendingOrders) || 0,
+      totalPurchased: Number(supplierData.totalPurchased) || 0,
+      lastOrderDate: supplierData.lastOrderDate || "Recently",
+      status: supplierData.status || "Active"
+    };
+    this.suppliers.unshift(item);
+    this.notify("supplier_added", item);
+    return item;
   }
 
   markNotificationAsRead(id) {

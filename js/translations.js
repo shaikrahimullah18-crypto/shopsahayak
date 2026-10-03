@@ -370,7 +370,29 @@ const TRANSLATIONS = {
     loginSkipDemoHint: "Camera unavailable or testing offline? Use demo bypass:",
     logoutBtn: "Logout",
     logoutSuccess: "Logged out successfully.",
-    welcomeBackToast: "Welcome back, Ravi Sharma! Store data synchronized."
+    welcomeBackToast: "Welcome back, Ravi Sharma! Store data synchronized.",
+
+    // Store Registration
+    loginNewUserPrompt: "New Kirana or Retail store?",
+    loginRegisterLink: "Register your store",
+    registerHeading: "Register Your Kirana Store",
+    registerSubheading: "Connect your shop to AI inventory, automated khata & smart billing",
+    regOwnerNameLabel: "Owner Full Name *",
+    regStoreNameLabel: "Store / Business Name *",
+    regEmailLabel: "Email Address *",
+    regPhoneLabel: "Mobile / WhatsApp Number *",
+    regCategoryLabel: "Store Category",
+    regUpiLabel: "Store UPI ID (For QR Billing)",
+    regAddressLabel: "Shop Address & City",
+    regGstinLabel: "GSTIN (Optional)",
+    regPasswordLabel: "Password (Min 6 chars) *",
+    regConfirmPasswordLabel: "Confirm Password *",
+    registerSubmitBtn: "Register Store & Launch ShopSahayak ✦",
+    regAlreadyUser: "Already have a store account?",
+    regBackToLogin: "Sign in here",
+    regPasswordMismatch: "Passwords do not match. Please re-enter.",
+    regPasswordTooShort: "Password must be at least 6 characters long.",
+    regSuccessMsg: "Store registered successfully! Launching ShopSahayak..."
   },
 
   te: {
@@ -739,7 +761,29 @@ const TRANSLATIONS = {
     loginSkipDemoHint: "కెమెరా అందుబాటులో లేదా? డెమో బైపాస్ ఉపయోగించండి:",
     logoutBtn: "లాగ్ అవుట్",
     logoutSuccess: "విజయవంతంగా లాగ్ అవుట్ అయ్యారు.",
-    welcomeBackToast: "తిరిగి స్వాగతం, రవి శర్మ గారు! దుకాణం డేటా సమకాలీకరించబడింది."
+    welcomeBackToast: "తిరిగి స్వాగతం, రవి శర్మ గారు! దుకాణం డేటా సమకాలీకరించబడింది.",
+
+    // Store Registration
+    loginNewUserPrompt: "కొత్త కిరాణా లేదా రిటైల్ దుకాణమా?",
+    loginRegisterLink: "మీ దుకాణాన్ని నమోదు చేసుకోండి",
+    registerHeading: "మీ కిరాణా దుకాణాన్ని నమోదు చేసుకోండి",
+    registerSubheading: "AI ఇన్వెంటరీ, ఆటోమేటిక్ ఖాతా & స్మార్ట్ బిల్లింగ్‌తో మీ దుకాణాన్ని కలపండి",
+    regOwnerNameLabel: "యజమాని పూర్తి పేరు *",
+    regStoreNameLabel: "దుకాణం / వ్యాపార పేరు *",
+    regEmailLabel: "ఈమెయిల్ చిరునామా *",
+    regPhoneLabel: "మొబైల్ / వాట్సాప్ నంబర్ *",
+    regCategoryLabel: "దుకాణ వర్గం",
+    regUpiLabel: "స్టోర్ UPI ID (QR బిల్లింగ్ కోసం)",
+    regAddressLabel: "దుకాణం చిరునామా & నగరం",
+    regGstinLabel: "GSTIN (ఐచ్ఛికం)",
+    regPasswordLabel: "పాస్‌వర్డ్ (కనీసం 6 అక్షరాలు) *",
+    regConfirmPasswordLabel: "పాస్‌వర్డ్‌ను నిర్ధారించండి *",
+    registerSubmitBtn: "దుకాణాన్ని నమోదు చేసి ShopSahayak ప్రారంభించండి ✦",
+    regAlreadyUser: "ఇప్పటికే ఖాతా ఉందా?",
+    regBackToLogin: "ఇక్కడ లాగిన్ అవ్వండి",
+    regPasswordMismatch: "పాస్‌వర్డ్‌లు సరిపోలడం లేదు. దయచేసి మళ్ళీ తనిఖీ చేయండి.",
+    regPasswordTooShort: "పాస్‌వర్డ్ కనీసం 6 అక్షరాలు ఉండాలి.",
+    regSuccessMsg: "దుకాణం విజయవంతంగా నమోదు చేయబడింది! ప్రారంభమవుతోంది..."
   },
 
   hi: {
@@ -1107,7 +1151,29 @@ const TRANSLATIONS = {
     loginSkipDemo: "फेस स्कैन छोड़ें (डेमो मोड)",
     loginSkipDemoHint: "कैमरा उपलब्ध नहीं है? डेमो बाईपास का उपयोग करें:",
     logoutBtn: "लॉग आउट",
-    logoutSuccess: "सफलतापूर्वक लॉग आउट हो गया।"
-    welcomeBackToast: "वापसी पर स्वागत है, रवि शर्मा जी! दुकान का डेटा सिंक हो गया है।"
+    logoutSuccess: "सफलतापूर्वक लॉग आउट हो गया।",
+    welcomeBackToast: "वापसी पर स्वागत है, रवि शर्मा जी! दुकान का डेटा सिंक हो गया है।",
+
+    // Store Registration
+    loginNewUserPrompt: "नया किराना या रिटेल स्टोर है?",
+    loginRegisterLink: "अपनी दुकान रजिस्टर करें",
+    registerHeading: "अपनी किराना दुकान रजिस्टर करें",
+    registerSubheading: "AI इन्वेंटरी, ऑटोमैटिक खाता और स्मार्ट बिलिंग से अपनी दुकान को जोड़ें",
+    regOwnerNameLabel: "मालिक का पूरा नाम *",
+    regStoreNameLabel: "दुकान / व्यापार का नाम *",
+    regEmailLabel: "ईमेल पता *",
+    regPhoneLabel: "मोबाइल / व्हाट्सएप नंबर *",
+    regCategoryLabel: "स्टोर श्रेणी",
+    regUpiLabel: "स्टोर UPI ID (QR बिलिंग हेतु)",
+    regAddressLabel: "दुकान का पता व शहर",
+    regGstinLabel: "GSTIN (वैकल्पिक)",
+    regPasswordLabel: "पासवर्ड (कम से कम 6 अक्षर) *",
+    regConfirmPasswordLabel: "पासवर्ड की पुष्टि करें *",
+    registerSubmitBtn: "दुकान रजिस्टर करें और ShopSahayak शुरू करें ✦",
+    regAlreadyUser: "पहले से खाता मौजूद है?",
+    regBackToLogin: "यहाँ लॉगिन करें",
+    regPasswordMismatch: "पासवर्ड मेल नहीं खाते। कृपया पुनः जांचें।",
+    regPasswordTooShort: "पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।",
+    regSuccessMsg: "दुकान सफलतापूर्वक रजिस्टर हुई! ShopSahayak शुरू हो रहा है..."
   }
 };

@@ -16,14 +16,25 @@ class ShopSahayakAIEngine {
     this.initWelcomeMessage();
   }
 
-  initWelcomeMessage() {
-    const stockCounts = this.store ? this.store.recalculateStockCounts() : { low: 7 };
-    const lowCount = stockCounts.low;
+  initWelcomeMessage(user) {
+    const ownerName = user?.name || "Ravi";
+    const storeName = user?.storeName || "Sharma Kirana Store";
+    const isNew = Boolean(user && user.email && user.email !== "ravi.sharma@kiranaos.in" && user.username !== "ravi");
+
+    let text;
+    if (isNew) {
+      text = `Namaste ${ownerName} ji! Welcome to ShopSahayak. Your store "${storeName}" is live and ready for operations. I am your AI business copilot. You can add your products, start recording customer sales, or ask me for advice on pricing and inventory management.`;
+    } else {
+      const stockCounts = this.store ? this.store.recalculateStockCounts() : { low: 7 };
+      const lowCount = stockCounts.low;
+      text = `Namaste Ravi garu! Good morning. I'm your ShopSahayak business operating assistant. Sharma Kirana Store currently has ${lowCount} items below safety stock, and rice demand is up by +21%. You can ask me anything about your inventory, sales, or supplier reorders in English, Telugu, or Hindi.`;
+    }
+
     this.chatHistory = [
       {
         id: "msg-welcome",
         sender: "ai",
-        text: `Namaste Ravi garu! Good morning. I'm your ShopSahayak business operating assistant. Sharma Kirana Store currently has ${lowCount} items below safety stock, and rice demand is up by +21%. You can ask me anything about your inventory, sales, or supplier reorders in English, Telugu, or Hindi.`,
+        text: text,
         detectedLang: "English",
         tools: null,
         calculation: null,
