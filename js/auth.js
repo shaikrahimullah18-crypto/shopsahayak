@@ -382,8 +382,49 @@ class ShopAuthManager {
 
       // Registration successful!
       if (regSuccess) {
-        regSuccess.innerText = dict.regSuccessMsg || "Store registered successfully! Launching ShopSahayak...";
+        let msgHtml = `
+          <div style="font-weight: 700; margin-bottom: 4px; font-size: 13.5px;">🎉 Store Registered in MongoDB Atlas!</div>
+          <div style="font-size: 12px; margin-bottom: 6px;">${dict.regSuccessMsg || "Account created successfully with dedicated MongoDB Atlas tables."}</div>
+        `;
+
+        if (data.tableCreated) {
+          msgHtml += `
+            <div style="font-size: 11.5px; margin-bottom: 4px; background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 4px;">
+              📦 <strong>Dedicated Table Created:</strong> <code style="color: #6ee7b7;">${data.tableCreated}</code>
+            </div>
+          `;
+        }
+
+        if (data.sms && data.sms.phone) {
+          msgHtml += `
+            <div style="font-size: 11.5px; margin-bottom: 6px; background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 4px;">
+              📱 <strong>Welcome Message:</strong> Dispatched to <strong style="color: #93c5fd;">${data.sms.phone}</strong>
+            </div>
+          `;
+          if (data.sms.whatsappUrl) {
+            msgHtml += `
+              <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center;">
+                <a href="${data.sms.whatsappUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: #ffffff; text-decoration: none; border-radius: 6px; padding: 6px 12px; font-weight: 600; font-size: 12px; transition: opacity 0.2s;">
+                  📲 Open Welcome on WhatsApp
+                </a>
+                <button type="button" id="regContinueAppBtn" style="background: var(--color-primary, #6366f1); color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+                  Enter Dashboard →
+                </button>
+              </div>
+            `;
+          }
+        }
+
+        regSuccess.innerHTML = msgHtml;
         regSuccess.style.display = "flex";
+        regSuccess.style.flexDirection = "column";
+
+        const contBtn = document.getElementById("regContinueAppBtn");
+        if (contBtn) {
+          contBtn.addEventListener("click", () => {
+            this.enterApp(true);
+          });
+        }
       }
 
       this.activeUser = data.user;
@@ -400,7 +441,7 @@ class ShopAuthManager {
       this._saveSession("registered_user");
       setTimeout(() => {
         this.enterApp(true);
-      }, 1200);
+      }, 3500);
 
     } catch (error) {
       if (regErr) {

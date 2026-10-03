@@ -1,4 +1,7 @@
 const Customer = require('../models/Customer');
+const User = require('../models/User');
+const { recordDataInUserTable } = require('../utils/dynamicTableManager');
+const { sendKhataReminderSMS } = require('../utils/smsService');
 
 /**
  * @desc    Get all customers (filtered by user)
@@ -57,6 +60,20 @@ exports.createCustomer = async (req, res, next) => {
       totalSpend: Number(req.body.totalSpend) || 0,
       khataBalance: Number(req.body.khataBalance) || 0
     });
+
+    // Record in user's dedicated dynamic collection in MongoDB Atlas
+    try {
+      let userPhone = req.body.userPhone;
+      if (!userPhone && userEmail) {
+        const userRec = await User.findOne({ email: userEmail });
+        if (userRec) userPhone = userRec.phone;
+      }
+      if (userPhone) {
+        await recordDataInUserTable(userPhone, 'customers', customer.toObject ? customer.toObject() : customer);
+      }
+    } catch (e) {
+      console.warn('⚠️ [CustomerController] User table sync warning:', e.message);
+    }
 
     res.status(201).json({ success: true, data: customer });
   } catch (error) {

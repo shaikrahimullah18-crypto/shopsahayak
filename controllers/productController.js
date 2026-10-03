@@ -3,6 +3,8 @@ const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
+const { recordDataInUserTable } = require('../utils/dynamicTableManager');
 const { productsData } = require('../utils/seedData');
 
 let memoryProducts = JSON.parse(JSON.stringify(productsData));
@@ -117,6 +119,21 @@ exports.createProduct = async (req, res, next) => {
 
     if (mongoose.connection.readyState === 1) {
       const product = await Product.create(newItem);
+
+      // Record in user's dedicated dynamic collection in MongoDB Atlas
+      try {
+        let userPhone = req.body.userPhone;
+        if (!userPhone && effectiveUserEmail) {
+          const userRec = await User.findOne({ email: effectiveUserEmail });
+          if (userRec) userPhone = userRec.phone;
+        }
+        if (userPhone) {
+          await recordDataInUserTable(userPhone, 'products', product.toObject ? product.toObject() : newItem);
+        }
+      } catch (e) {
+        console.warn('⚠️ [ProductController] User table sync warning:', e.message);
+      }
+
       return res.status(201).json({ success: true, data: product });
     }
 

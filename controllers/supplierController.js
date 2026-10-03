@@ -1,5 +1,7 @@
 const Supplier = require('../models/Supplier');
 const PurchaseOrder = require('../models/PurchaseOrder');
+const User = require('../models/User');
+const { recordDataInUserTable } = require('../utils/dynamicTableManager');
 
 /**
  * @desc    Get all suppliers (filtered by user)
@@ -41,6 +43,20 @@ exports.createSupplier = async (req, res, next) => {
       totalPurchased: Number(req.body.totalPurchased) || 0,
       status: req.body.status || 'Active'
     });
+
+    // Record in user's dedicated dynamic collection in MongoDB Atlas
+    try {
+      let userPhone = req.body.userPhone;
+      if (!userPhone && userEmail) {
+        const userRec = await User.findOne({ email: userEmail });
+        if (userRec) userPhone = userRec.phone;
+      }
+      if (userPhone) {
+        await recordDataInUserTable(userPhone, 'suppliers', supplier.toObject ? supplier.toObject() : supplier);
+      }
+    } catch (e) {
+      console.warn('⚠️ [SupplierController] User table sync warning:', e.message);
+    }
 
     res.status(201).json({
       success: true,

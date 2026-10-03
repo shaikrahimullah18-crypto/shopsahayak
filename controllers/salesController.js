@@ -1,6 +1,8 @@
 const Transaction = require('../models/Transaction');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
+const User = require('../models/User');
+const { recordDataInUserTable } = require('../utils/dynamicTableManager');
 
 /**
  * @desc    Get all transactions / POS sales (filtered by user)
@@ -96,6 +98,20 @@ exports.createSale = async (req, res, next) => {
       status: 'Completed',
       userEmail: effectiveUserEmail
     });
+
+    // Record in user's dedicated dynamic collection in MongoDB Atlas
+    try {
+      let userPhone = req.body.userPhone;
+      if (!userPhone && effectiveUserEmail) {
+        const userRec = await User.findOne({ email: effectiveUserEmail });
+        if (userRec) userPhone = userRec.phone;
+      }
+      if (userPhone) {
+        await recordDataInUserTable(userPhone, 'sales', transaction.toObject ? transaction.toObject() : transaction);
+      }
+    } catch (e) {
+      console.warn('⚠️ [SalesController] User table sync warning:', e.message);
+    }
 
     res.status(201).json({
       success: true,

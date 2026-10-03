@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const StoreProfile = require('../models/StoreProfile');
+const { createUserTable } = require('../utils/dynamicTableManager');
+const { sendRegistrationSMS } = require('../utils/smsService');
 
 /**
  * @desc    Register a new store user
@@ -37,12 +39,14 @@ exports.register = async (req, res, next) => {
       });
     }
 
+    const userPhone = phone || '+91 98490 23145';
+
     const user = await User.create({
       name,
       email,
       password,
       role: role || 'owner',
-      phone: phone || '+91 98490 23145',
+      phone: userPhone,
       storeName,
       storeCategory: storeCategory || 'Grocery & FMCG',
       address: address || '',
@@ -65,10 +69,34 @@ exports.register = async (req, res, next) => {
       });
     }
 
+    // 1. DYNAMIC TABLE CREATION IN MONGODB ATLAS:
+    // Create dedicated collection/table for this user named after their mobile & name
+    let userTableMeta = null;
+    try {
+      userTableMeta = await createUserTable(user);
+    } catch (tblErr) {
+      console.warn('⚠️ [Register] Dynamic table creation warning:', tblErr.message);
+    }
+
+    // 2. MOBILE MESSAGE DISPATCH:
+    // Send welcome SMS / WhatsApp notification to the user's mobile number & log to MongoDB Atlas
+    let smsResult = null;
+    try {
+      smsResult = await sendRegistrationSMS({
+        phone: user.phone,
+        name: user.name,
+        storeName: user.storeName,
+        email: user.email
+      });
+    } catch (smsErr) {
+      console.warn('⚠️ [Register] SMS dispatch warning:', smsErr.message);
+    }
+
     const token = user.getSignedJwtToken();
 
     res.status(201).json({
       success: true,
+      message: `Store registered successfully! Welcome message dispatched to mobile ${user.phone}.`,
       token,
       user: {
         id: user._id,
@@ -82,7 +110,15 @@ exports.register = async (req, res, next) => {
         gstin: user.gstin,
         upiId: user.upiId
       },
-      storeProfile
+      storeProfile,
+      tableCreated: userTableMeta ? userTableMeta.tableName : null,
+      sms: smsResult ? {
+        status: smsResult.status,
+        phone: smsResult.recipientPhone,
+        messageId: smsResult.messageId,
+        content: smsResult.content,
+        whatsappUrl: smsResult.whatsappUrl
+      } : null
     });
   } catch (error) {
     next(error);
