@@ -642,6 +642,76 @@ class UIController {
 
     this.showToast("Store profile details saved & synced to MongoDB!", "success");
   }
+
+  // ------------------------------------------------------------------------
+  // MONGODB ATLAS LIVE DB EXPLORER
+  // ------------------------------------------------------------------------
+  async openDbExplorerModal() {
+    const modal = document.getElementById("dbExplorerModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    await this.refreshDbExplorer();
+  }
+
+  closeDbExplorerModal() {
+    const modal = document.getElementById("dbExplorerModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  async refreshDbExplorer() {
+    const body = document.getElementById("dbExplorerBody");
+    if (!body) return;
+    body.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--color-text-muted);"><div class="spinner" style="margin: 0 auto 10px auto;"></div>Fetching live collections from MongoDB Atlas...</div>';
+
+    try {
+      const res = await fetch("/api/store/db-inspect");
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Failed to load database inspection");
+
+      const collections = data.collections || {};
+      const colNames = Object.keys(collections);
+
+      let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--color-border);">
+          <div>
+            <div style="font-weight: 700; color: #10b981; font-size: 13.5px;">● Connected to MongoDB Atlas (${data.clusterHost || 'Cluster0'})</div>
+            <div style="font-size: 11.5px; color: var(--color-text-subtle); margin-top: 2px;">Database: <strong style="color: #6ee7b7;">${data.databaseName || 'shopsahayak'}</strong> • Total Tables / Collections: <strong>${data.totalCollections}</strong></div>
+          </div>
+          <a href="/api/store/db-inspect" target="_blank" class="btn btn-sm btn-secondary" style="font-size: 11.5px; text-decoration: none;">Raw JSON API ↗</a>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+      `;
+
+      for (const name of colNames) {
+        const info = collections[name];
+        const isUserTable = name.startsWith("user_") || name.startsWith("messages_") || name.startsWith("products_") || name.startsWith("customers_") || name.startsWith("sales_");
+        const badgeColor = isUserTable ? "background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);" : "background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);";
+
+        html += `
+          <details style="background: var(--color-surface, #1e293b); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; padding: 10px 14px;">
+            <summary style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 13px; list-style: none;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span>${isUserTable ? '👤' : '📁'}</span>
+                <span style="color: var(--color-text-primary); font-family: monospace;">${escapeHtml(name)}</span>
+                <span style="font-size: 10.5px; padding: 2px 7px; border-radius: 10px; font-weight: 700; ${badgeColor}">
+                  ${info.count} documents
+                </span>
+              </div>
+              <span style="font-size: 11.5px; color: var(--color-text-muted);">View Data ▼</span>
+            </summary>
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06);">
+              <pre style="background: #0f172a; color: #94a3b8; padding: 10px; border-radius: 6px; font-size: 11px; overflow-x: auto; max-height: 220px; font-family: 'Consolas', monospace;">${escapeHtml(JSON.stringify(info.items, null, 2))}</pre>
+            </div>
+          </details>
+        `;
+      }
+
+      html += `</div>`;
+      body.innerHTML = html;
+    } catch (e) {
+      body.innerHTML = `<div style="text-align: center; padding: 30px; color: #ef4444;">❌ Error loading database tables: ${escapeHtml(e.message)}</div>`;
+    }
+  }
 }
 
 window.shopUI = new UIController(window.shopStore, window.shopAiEngine);
